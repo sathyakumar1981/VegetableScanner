@@ -111,6 +111,6 @@ class KnowledgeStore(context: Context) {
     }
 
     companion object {
-        const val MAX_SAMPLES_PER_VEGETABLE = 40
+        const val MAX_SAMPLES_PER_VEGETABLE = 80
     }
 }

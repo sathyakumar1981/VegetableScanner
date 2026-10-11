@@ -1,0 +1,4 @@
+<resources>
+    <string name="frame_size">Frame size: make the vegetable fill the white frame</string>
+    <string name="teach_hint_frame">Place ONE vegetable inside the white frame, type its name, tap Learn and turn it slowly. Repeat from other angles and positions.</string>
+</resources>

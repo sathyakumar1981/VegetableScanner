@@ -3,10 +3,16 @@ package com.example.vegetablescanner
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.Matrix
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -18,6 +24,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.example.vegetablescanner.databinding.ActivityMainBinding
+import java.util.Random
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -28,14 +35,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var store: KnowledgeStore
+    private lateinit var frameView: CropFrameView
 
     @Volatile private var embedder: Embedder? = null
     @Volatile private var mode = Mode.USE
+
+    /** Size of the white frame (fraction of the shorter screen side). Changed by the slider. */
+    @Volatile private var boxFraction = 0.6f
 
     // Teaching state (touched by the UI thread and the camera thread)
     @Volatile private var teachName: String? = null
     @Volatile private var teachRemaining = 0
     private var lastRunMs = 0L
+    private val random = Random()
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -53,6 +65,8 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor = Executors.newSingleThreadExecutor()
         store = KnowledgeStore(this)
 
+        setupCropUi()
+        binding.teachStatus.text = getString(R.string.teach_hint_frame)
         setupModeToggle()
         binding.learnButton.setOnClickListener { onLearnClicked() }
         binding.manageButton.setOnClickListener { showTaughtList() }
@@ -62,6 +76,71 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED
         ) startCamera() else permissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    // ---------- Crop frame ----------
+
+    /** Adds the white frame over the camera and a size slider to the bottom panel. */
+    private fun setupCropUi() {
+        // Frame sits right above the camera preview, below all buttons and panels
+        frameView = CropFrameView(this).apply { fraction = boxFraction }
+        binding.root.addView(
+            frameView, 1,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        val bar = SeekBar(this).apply {
+            max = 100
+            progress = ((boxFraction - 0.3f) / 0.65f * 100f).toInt()
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                    boxFraction = 0.3f + 0.65f * progress / 100f
+                    frameView.fraction = boxFraction
+                }
+
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+        }
+        val label = TextView(this).apply {
+            text = getString(R.string.frame_size)
+            setTextColor(Color.WHITE)
+            textSize = 13f
+        }
+        val panel = binding.usePanel.parent as LinearLayout
+        panel.addView(bar, 0)
+        panel.addView(label, 0) // label ends up above the slider
+    }
+
+    /**
+     * Cuts the camera picture down to what is inside the white frame.
+     * When teaching, the cut is moved slightly at random so the app also learns the
+     * vegetable at slightly different positions.
+     */
+    private fun cropToFrame(src: Bitmap, jitter: Boolean): Bitmap {
+        val vw = binding.previewView.width.toFloat()
+        val vh = binding.previewView.height.toFloat()
+        if (vw <= 0f || vh <= 0f) return src
+
+        // PreviewView fills the screen by zooming the camera picture (FILL_CENTER)
+        val scale = maxOf(vw / src.width, vh / src.height)
+        val boxPx = boxFraction * minOf(vw, vh)
+        val side = (boxPx / scale).toInt().coerceIn(48, minOf(src.width, src.height))
+
+        var left = (src.width - side) / 2
+        var top = (src.height - side) / 2
+        if (jitter) {
+            val j = (side * 0.08f).toInt()
+            if (j > 0) {
+                left += random.nextInt(2 * j + 1) - j
+                top += random.nextInt(2 * j + 1) - j
+            }
+        }
+        left = left.coerceIn(0, src.width - side)
+        top = top.coerceIn(0, src.height - side)
+        return Bitmap.createBitmap(src, left, top, side, side)
     }
 
     // ---------- Model loading ----------
@@ -196,14 +275,15 @@ class MainActivity : AppCompatActivity() {
 
             if (mode == Mode.USE) {
                 lastRunMs = now
-                val embedding = model.embed(image.toRotatedBitmap())
-                val match = store.bestMatch(embedding)
+                val crop = cropToFrame(image.toRotatedBitmap(), jitter = false)
+                val match = store.bestMatch(model.embed(crop))
                 runOnUiThread { showResult(match) }
             } else {
                 val name = teachName ?: return
                 if (teachRemaining <= 0) return
                 lastRunMs = now
-                store.add(name, model.embed(image.toRotatedBitmap()))
+                val crop = cropToFrame(image.toRotatedBitmap(), jitter = true)
+                store.add(name, model.embed(crop))
                 teachRemaining -= 1
                 if (teachRemaining == 0) {
                     store.commit()
@@ -258,8 +338,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        /** How many camera frames are saved each time the Learn button is tapped. */
-        private const val SAMPLES_PER_TEACH = 6
+        /** Frames saved each time Learn is tapped (about 4 seconds of turning the vegetable). */
+        private const val SAMPLES_PER_TEACH = 12
         private const val FRAME_INTERVAL_MS = 300L
 
         /** Minimum match (0..1) before the app is willing to name a vegetable. Tune after testing. */
