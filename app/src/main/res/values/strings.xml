@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">Vegetable Scanner</string>
+
+    <string name="mode_teach">Teaching mode</string>
+    <string name="mode_use">User mode</string>
+
+    <string name="loading">Getting ready…</string>
+    <string name="downloading_model">Downloading the recognition model (one time only)…</string>
+    <string name="model_failed">Could not load the recognition model. Connect to the internet and reopen the app.</string>
+
+    <string name="teach_hint">Hold ONE vegetable in front of the camera, type its name, then tap Learn.</string>
+    <string name="name_hint">Vegetable name (e.g. Tomato)</string>
+    <string name="learn">Learn this vegetable</string>
+    <string name="taught_list">Taught list</string>
+    <string name="learning">Learning… turn the vegetable slowly</string>
+    <string name="learned_fmt">Learned \"%1$s\" (%2$d examples). Teach it again from another angle for better accuracy.</string>
+    <string name="enter_name">Please type the vegetable name first.</string>
+    <string name="not_ready">Still getting ready, please wait a moment.</string>
+
+    <string name="show_vegetable">Show a vegetable to the camera</string>
+    <string name="nothing_taught">Nothing taught yet. Switch to Teaching mode first.</string>
+    <string name="unknown_vegetable">Not sure. Try Teaching mode to add it.</string>
+    <string name="similarity_fmt">Match: %1$d%%</string>
+
+    <string name="taught_title">Taught vegetables</string>
+    <string name="taught_empty">Nothing taught yet.</string>
+    <string name="taught_item_fmt">%1$s (%2$d examples)</string>
+    <string name="delete_title">Delete \"%1$s\"?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+
+    <string name="camera_permission_needed">Camera permission is required to recognise vegetables.</string>
+</resources>
