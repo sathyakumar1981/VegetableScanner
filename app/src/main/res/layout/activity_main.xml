@@ -9,7 +9,31 @@
         android:id="@+id/previewView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+<LinearLayout
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:layout_gravity="top"
+       android:background="#CC000000"
+       android:gravity="center"
+       android:orientation="vertical"
+       android:paddingTop="32dp"
+       android:paddingBottom="12dp">
 
+       <TextView
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:text="@string/app_name"
+           android:textColor="#FFFFFF"
+           android:textSize="22sp"
+           android:textStyle="bold" />
+
+       <TextView
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:text="@string/developer_name"
+           android:textColor="#B0FFFFFF"
+           android:textSize="14sp" />
+   </LinearLayout>
     <!-- Mode switch -->
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/modeToggle"
